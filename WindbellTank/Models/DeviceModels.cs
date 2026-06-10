@@ -31,6 +31,7 @@ namespace WindbellTank.Models
         public double WaterAlarmMm  { get; set; }
         public double HighTempC     { get; set; } = 55.0;
         public double LowTempC      { get; set; } = -40.0;
+        public string Remark { get; set; } = string.Empty; // Mütləq sahədir
     }
 
     public class SensorSetting

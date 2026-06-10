@@ -70,6 +70,7 @@ namespace WindbellTank.Controllers
                 serverTime  = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
                 data        = new
                 {
+                    iotDevId = iotDevId, // Bu sətiri mütləq əlavə et (sənəd 3.1)
                     serverTime         = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
                     softVer            = 1,
                     sensorVer          = _store.SensorVer,
@@ -254,7 +255,8 @@ namespace WindbellTank.Controllers
                         waterWarning = p.WaterWarningMm.ToString("F1", System.Globalization.CultureInfo.InvariantCulture),
                         waterAlarm   = p.WaterAlarmMm.ToString("F1", System.Globalization.CultureInfo.InvariantCulture),
                         highTemp     = p.HighTempC.ToString("F1", System.Globalization.CultureInfo.InvariantCulture),
-                        lowTemp      = p.LowTempC.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)
+                        lowTemp      = p.LowTempC.ToString("F1", System.Globalization.CultureInfo.InvariantCulture),
+                        remark = p.Remark ?? "" // Cihaz bunu mütləq gözləyir
                     }).ToList()
                 },
                 msg = (string?)null
