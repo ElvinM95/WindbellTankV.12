@@ -71,7 +71,7 @@ namespace WindbellTank.Controllers
                 data        = new
                 {
                     iotDevId = iotDevId, // Bu sətiri mütləq əlavə et (sənəd 3.1)
-                    serverTime         = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                    //serverTime         = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
                     softVer            = 1,
                     sensorVer          = _store.SensorVer,
                     gasVer             = _store.GasVer,
@@ -101,9 +101,9 @@ namespace WindbellTank.Controllers
             {
                 tankNo       = int.Parse(t.TankNo), // Mütləq Integer olmalıdır
                 tankVer      = int.Parse(t.Version),
-                tankTableVer = _store.TableVer,
-                probeVer     = _store.ProbeVer,
-                densityVer   = _store.DensityVer
+                tankTableVer = (int)_store.TableVer,
+                probeVer     = (int)_store.ProbeVer,
+                densityVer   = (int)_store.DensityVer
             });
         }
 
