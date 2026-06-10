@@ -99,7 +99,7 @@ namespace WindbellTank.Controllers
 
             return _store.Tanks.Select(t => new
             {
-                tankNo       = t.TankNo,
+                tankNo       = int.Parse(t.TankNo), // Mütləq Integer olmalıdır
                 tankVer      = int.Parse(t.Version),
                 tankTableVer = _store.TableVer,
                 probeVer     = _store.ProbeVer,
@@ -403,6 +403,8 @@ namespace WindbellTank.Controllers
                         sensorType  = s.SensorType,
                         position    = s.Position,
                         positionNum = s.PositionNum,
+                        warningValue = "0", // Sənəd tələbi
+                        alarmValue = "0",   // Sənəd tələbi
                         used        = s.Enabled ? "1" : "0"
                     }).ToList()
                 },
