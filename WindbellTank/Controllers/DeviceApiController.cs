@@ -67,7 +67,6 @@ namespace WindbellTank.Controllers
                 code        = 200,
                 result      = 0,
                 commandType = 6,
-                serverTime  = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
                 data        = new
                 {
                     iotDevId = iotDevId, // Bu sətiri mütləq əlavə et (sənəd 3.1)
@@ -89,11 +88,11 @@ namespace WindbellTank.Controllers
             {
                 return new[] { new
                 {
-                    tankNo       = "01",
-                    tankVer      = _store.TankVer,
-                    tankTableVer = _store.TableVer,
-                    probeVer     = _store.ProbeVer,
-                    densityVer   = _store.DensityVer
+                    tankNo       = 1,
+                    tankVer      = (int)_store.TankVer,
+                    tankTableVer = (int)_store.TableVer,
+                    probeVer     = (int)_store.ProbeVer,
+                    densityVer   = (int)_store.DensityVer
                 }};
             }
 
@@ -129,18 +128,21 @@ namespace WindbellTank.Controllers
                 tanksToReturn = tanksToReturn.Where(t => t.TankNo == requestedTankNo.PadLeft(2, '0'));
             }
 
-            var tankList = tanksToReturn.Select(t => new
-            {
-                tankNo        = t.TankNo,
-                oilCode       = t.OilCode,
-                oilName       = t.OilName,
-                oilColor = "1", // Mütləqdir: (1=yaşıl, 2=qırmızı və s. - default 1 qoya bilərsən)
-                oilRate       = t.ExpansionRate,   // "0.0012" benzin
-                temperature = "20.0", // Mütləqdir: Standart hesablama temperaturu
-                weightDensity = "0.0", // Mütləqdir: Çəki sıxlığı
-                diameter      = t.DiameterMm.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                volume        = t.VolumeLiters.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                used          = t.Enabled ? "1" : "0"
+            var tankList = tanksToReturn.Select(t => {
+                var oilProd = _store.OilProducts.FirstOrDefault(o => o.OilCode == t.OilCode);
+                return new
+                {
+                    tankNo        = t.TankNo,
+                    oilCode       = t.OilCode,
+                    oilName       = t.OilName,
+                    oilColor      = oilProd?.OilColor ?? "1",
+                    oilRate       = t.ExpansionRate,
+                    temperature   = oilProd?.Temperature ?? "20.0",
+                    weightDensity = oilProd?.WeightDensity ?? "0.0",
+                    diameter      = t.DiameterMm.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    volume        = t.VolumeLiters.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    used          = t.Enabled ? "1" : "0"
+                };
             }).ToList();
 
             foreach (var tank in tankList)
@@ -288,7 +290,8 @@ namespace WindbellTank.Controllers
                             WaterWarningMm = double.TryParse(GetStr(p, "waterWarning"), out double ww) ? ww : 0,
                             WaterAlarmMm = double.TryParse(GetStr(p, "waterAlarm"), out double wa) ? wa : 0,
                             HighTempC = double.TryParse(GetStr(p, "highTemp"), out double ht) ? ht : 0,
-                            LowTempC = double.TryParse(GetStr(p, "lowTemp"), out double lt) ? lt : 0
+                            LowTempC = double.TryParse(GetStr(p, "lowTemp"), out double lt) ? lt : 0,
+                            Remark = GetStr(p, "remark") == "-" ? "" : GetStr(p, "remark")
                         }, ParseOptionalVersion(p, "probeVer"));
                     }
                 }
@@ -403,8 +406,8 @@ namespace WindbellTank.Controllers
                         sensorType  = s.SensorType,
                         position    = s.Position,
                         positionNum = s.PositionNum,
-                        warningValue = "0", // Sənəd tələbi
-                        alarmValue = "0",   // Sənəd tələbi
+                        warningValue = s.WarningValue ?? "0",
+                        alarmValue = s.AlarmValue ?? "0",
                         used        = s.Enabled ? "1" : "0"
                     }).ToList()
                 },
@@ -431,7 +434,9 @@ namespace WindbellTank.Controllers
                             SensorType = GetStr(s, "sensorType"),
                             Position = GetStr(s, "position"),
                             PositionNum = GetStr(s, "positionNum"),
-                            Enabled = GetStr(s, "used") == "1"
+                            Enabled = GetStr(s, "used") == "1",
+                            WarningValue = GetStr(s, "warningValue") == "-" ? "0" : GetStr(s, "warningValue"),
+                            AlarmValue = GetStr(s, "alarmValue") == "-" ? "0" : GetStr(s, "alarmValue")
                         }, sensorVersion);
                         count++;
                     }
@@ -536,7 +541,8 @@ namespace WindbellTank.Controllers
                         fixRate        = d.FixRate,
                         initDensity    = d.InitDensity,
                         secondDensity  = d.SecondDensity,
-                        densityFloatNo = d.DensityFloatNo
+                        densityFloatNo = d.DensityFloatNo,
+                        remark         = d.Remark ?? ""
                     })
                 },
                 msg = (string?)null
@@ -639,7 +645,7 @@ namespace WindbellTank.Controllers
 
         // ── REAL-TIME DATA — Cihazdan məlumat gəlir ───────────────────
         [HttpPost("uploadAtgData")]
-        public IActionResult UploadAtgData([FromBody] JsonElement body)
+        public async Task<IActionResult> UploadAtgData([FromBody] JsonElement body)
         {
             try
             {
@@ -656,7 +662,16 @@ namespace WindbellTank.Controllers
                 var existingTank = _store.Tanks.FirstOrDefault(t => t.TankNo == tankNo && t.Enabled);
                 if (existingTank == null)
                 {
-                    BackgroundLogger.Log($"[AUTO-DISCOVERY] TANK_NOT_FOUND: Çən {tankNo} aktiv deyil və ya tapılmadı. Cihazın 'uploadTankData' göndərməsi gözlənilir...", ConsoleColor.Yellow);
+                    BackgroundLogger.Log($"[AUTO-DISCOVERY] TANK_NOT_FOUND: Çən {tankNo} tapılmadı. Avtomatik yaradılır...", ConsoleColor.Yellow);
+                    var newTank = new WindbellTank.Models.TankSetting 
+                    { 
+                        TankNo = tankNo, 
+                        OilCode = oilCode, 
+                        OilName = oilName, 
+                        Enabled = true 
+                    };
+                    await _store.UpdateTankAsync(newTank);
+                    BackgroundLogger.Log($"[AUTO-DISCOVERY] Çən {tankNo} avtomatik olaraq yaradıldı.", ConsoleColor.Green);
                 }
 
                 // Səviyyə məlumatları

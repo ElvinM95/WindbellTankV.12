@@ -42,6 +42,7 @@ namespace WindbellTank.Models
                 e.Property(p => p.TankNo).HasMaxLength(10);
                 e.Property(p => p.ProbeId).HasMaxLength(20);
                 e.Property(p => p.Version).HasMaxLength(10);
+                e.Property(p => p.Remark).HasMaxLength(200);
             });
 
             // ── SensorSetting ────────────────────────────────
@@ -53,6 +54,8 @@ namespace WindbellTank.Models
                 e.Property(s => s.SensorType).HasMaxLength(10);
                 e.Property(s => s.Position).HasMaxLength(10);
                 e.Property(s => s.PositionNum).HasMaxLength(10);
+                e.Property(s => s.WarningValue).HasMaxLength(20);
+                e.Property(s => s.AlarmValue).HasMaxLength(20);
             });
 
             // ── OilProductSetting ────────────────────────────

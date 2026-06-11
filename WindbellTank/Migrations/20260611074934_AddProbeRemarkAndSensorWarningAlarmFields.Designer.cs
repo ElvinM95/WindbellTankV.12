@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using WindbellTank.Models;
 
@@ -10,9 +11,11 @@ using WindbellTank.Models;
 namespace WindbellTank.Migrations
 {
     [DbContext(typeof(WindbellDbContext))]
-    partial class WindbellDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260611074934_AddProbeRemarkAndSensorWarningAlarmFields")]
+    partial class AddProbeRemarkAndSensorWarningAlarmFields
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

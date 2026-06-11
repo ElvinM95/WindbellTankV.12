@@ -11,7 +11,7 @@ namespace WindbellTank.Models
     public class SystemVersion
     {
         [Key]
-        public int Id { get; set; } = 1; // Həmişə 1 — tək sətir
+        public int Id { get; set; } // Həmişə tək sətir
 
         public int TankVer       { get; set; } = 1;
         public int ProbeVer      { get; set; } = 1;

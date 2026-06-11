@@ -41,6 +41,8 @@ namespace WindbellTank.Models
         public string Position   { get; set; } = "0";
         public string PositionNum { get; set; } = "01";
         public bool   Enabled    { get; set; } = true;
+        public string WarningValue { get; set; } = "0";  // Sənəd tələbi: mütləq göndərilməlidir
+        public string AlarmValue   { get; set; } = "0";  // Sənəd tələbi: mütləq göndərilməlidir
     }
 
     public class OilProductSetting

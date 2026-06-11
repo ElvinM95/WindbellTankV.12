@@ -102,7 +102,7 @@ namespace WindbellTank.Services
                 var db = scope.ServiceProvider.GetRequiredService<WindbellDbContext>();
 
                 // Versiyaları yüklə
-                var sysVer = db.SystemVersions.FirstOrDefault(v => v.Id == 1);
+                var sysVer = db.SystemVersions.FirstOrDefault();
                 if (sysVer != null)
                 {
                     TankVer       = sysVer.TankVer;
@@ -156,12 +156,14 @@ namespace WindbellTank.Services
 
         private async Task SaveVersionsAsync(WindbellDbContext db)
         {
-            var sysVer = db.SystemVersions.FirstOrDefault(v => v.Id == 1);
+            var sysVer = db.SystemVersions.FirstOrDefault();
+            bool isNew = false;
             if (sysVer == null)
             {
-                sysVer = new SystemVersion { Id = 1 };
-                db.SystemVersions.Add(sysVer);
+                sysVer = new SystemVersion() { Id = 1 };
+                isNew = true;
             }
+
             sysVer.TankVer       = TankVer;
             sysVer.ProbeVer      = ProbeVer;
             sysVer.SensorVer     = SensorVer;
@@ -169,7 +171,21 @@ namespace WindbellTank.Services
             sysVer.DensityVer    = DensityVer;
             sysVer.OilProductVer = OilProductVer;
             sysVer.GasVer        = GasVer;
-            await db.SaveChangesAsync();
+
+            if (isNew)
+            {
+                // Entity Framework Core SQL Server 2005-də Identity Insert xətasına qarşı RAW SQL istifadə edilir
+                await db.Database.ExecuteSqlRawAsync(@"
+                    SET IDENTITY_INSERT WindbellSystemVersions ON;
+                    INSERT INTO WindbellSystemVersions (Id, TankVer, ProbeVer, SensorVer, TableVer, DensityVer, OilProductVer, GasVer)
+                    VALUES (1, {0}, {1}, {2}, {3}, {4}, {5}, {6});
+                    SET IDENTITY_INSERT WindbellSystemVersions OFF;
+                ", sysVer.TankVer, sysVer.ProbeVer, sysVer.SensorVer, sysVer.TableVer, sysVer.DensityVer, sysVer.OilProductVer, sysVer.GasVer);
+            }
+            else
+            {
+                await db.SaveChangesAsync();
+            }
         }
 
         // ── Tank ayarını yenilə ──────────────────────────────────
@@ -212,7 +228,7 @@ namespace WindbellTank.Services
                 }
                 catch (Exception ex)
                 {
-                    BackgroundLogger.Log($"[DB ⚠] Tank SQL yazma xətası: {ex.Message}", ConsoleColor.DarkRed);
+                    BackgroundLogger.Log($"[DB ⚠] Tank SQL yazma xətası: {ex.Message} | Inner: {ex.InnerException?.Message}", ConsoleColor.DarkRed);
                 }
             }
 
@@ -222,7 +238,7 @@ namespace WindbellTank.Services
         // ── Probe ayarını yenilə ─────────────────────────────────
         public async Task UpdateProbeAsync(ProbeSetting setting, int? incomingVersion = null)
         {
-            var existing = Probes.FirstOrDefault(p => p.TankNo == setting.TankNo);
+            var existing = Probes.FirstOrDefault(p => p.TankNo == setting.TankNo && p.ProbeId == setting.ProbeId);
             if (existing != null) Probes.Remove(existing);
             ProbeVer = ResolveNextVersion(ProbeVer, incomingVersion);
             setting.Version = ProbeVer.ToString();
@@ -251,6 +267,7 @@ namespace WindbellTank.Services
                         dbEntity.HighTempC      = setting.HighTempC;
                         dbEntity.LowTempC       = setting.LowTempC;
                         dbEntity.Version        = setting.Version;
+                        dbEntity.Remark         = setting.Remark;
                     }
                     else
                     {
@@ -286,10 +303,12 @@ namespace WindbellTank.Services
                     var dbEntity = db.SensorSettings.FirstOrDefault(s => s.SensorNo == setting.SensorNo);
                     if (dbEntity != null)
                     {
-                        dbEntity.SensorType  = setting.SensorType;
-                        dbEntity.Position    = setting.Position;
-                        dbEntity.PositionNum = setting.PositionNum;
-                        dbEntity.Enabled     = setting.Enabled;
+                        dbEntity.SensorType   = setting.SensorType;
+                        dbEntity.Position     = setting.Position;
+                        dbEntity.PositionNum  = setting.PositionNum;
+                        dbEntity.Enabled      = setting.Enabled;
+                        dbEntity.WarningValue = setting.WarningValue;
+                        dbEntity.AlarmValue   = setting.AlarmValue;
                     }
                     else
                     {
